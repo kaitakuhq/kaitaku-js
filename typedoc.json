@@ -1,0 +1,7 @@
+{
+    "entryPoints": [
+        "src/kaitaku-js-client.ts"
+    ],
+    "entryPointStrategy": "expand",
+    "out": "docs"
+}
