@@ -6,3 +6,12 @@ Kaitaku JavaScript API client library.
 
 [![codecov](https://codecov.io/gh/kaitakuhq/kaitaku-js/branch/main/graph/badge.svg?token=3KHP004XAS)](https://codecov.io/gh/kaitakuhq/kaitaku-js)
 
+# Install
+
+```
+npm install @kaitaku/kaitaku-js
+
+# or
+
+yarn add @kaitaku/kaitaku-js
+```
