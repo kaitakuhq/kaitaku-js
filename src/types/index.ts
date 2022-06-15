@@ -1,2 +1,140 @@
-export * from './error'
-export * from './types'
+export interface Auth {
+  id: string
+  name: string
+  token: string
+}
+
+export interface Category {
+  active: boolean
+  description: string
+  id: string
+  name: string
+}
+
+export interface Comment {
+  categoryId: string
+  comment: string
+  createdAt: number
+  id: string
+  userId: string
+  userVoted: boolean
+  votes: number
+}
+
+export const fetchErrorToHttpError = (err?: Error): HTTPError => {
+  let appStatusCode
+  const message = err?.message || ''
+
+  switch (message) {
+    case 'Failed to fetch':
+      appStatusCode = HTTPErrorStatusCode.NotConnected
+      break
+    default:
+      appStatusCode = undefined
+      break
+  }
+  if (!err) {
+    err = new Error()
+  }
+
+  return {
+    ...err,
+    appStatusCode,
+    responseCode: '',
+    responseError: ''
+  }
+}
+
+export interface HTTPError extends Error {
+  appStatusCode?: HTTPErrorStatusCode
+  responseCode?: string
+  responseError?: string
+}
+
+export enum HTTPErrorStatusCode {
+  InternalServerErr = 'Internal Server Error',
+  InvalidRequest = 'Invalid Request',
+  NotConnected = 'Not Connected',
+  NotFound = 'Not Found',
+  Unauthorized = 'Unauthorized'
+}
+
+export interface HttpResponse<T> {
+  data?: T
+  status: string
+  code?: string
+  error?: string
+}
+
+export interface KaitakuError {
+  code: KaitakuErrorCode
+  message: string
+}
+
+export enum KaitakuErrorCode {
+  NotConnected = 'NotConnected',
+  Unauthorized = 'Unauthorized',
+  UnknownSDKError = 'UnknownSDKError'
+}
+
+export interface KaitakuProps {
+  onError: (error: KaitakuError) => void
+  projectId: string
+  showFeedbackUI?: boolean
+  showFeedbackButton?: boolean
+  token: string
+  userId: string
+}
+
+export const NewKaitakuError = (httpError: HTTPError): KaitakuError => {
+  let code = KaitakuErrorCode.UnknownSDKError
+  let message = 'Please contact support.'
+  switch (httpError.appStatusCode) {
+    case HTTPErrorStatusCode.Unauthorized:
+      code = KaitakuErrorCode.Unauthorized
+      message = 'Token and project ID do not match or is not authorized.'
+      break
+    case HTTPErrorStatusCode.NotFound:
+    case HTTPErrorStatusCode.InvalidRequest:
+    case HTTPErrorStatusCode.InternalServerErr:
+      code = KaitakuErrorCode.UnknownSDKError
+      break
+    case HTTPErrorStatusCode.NotConnected:
+      code = KaitakuErrorCode.NotConnected
+      message = 'Check device connection. If connected, please check our status page.'
+      break
+  }
+  return {
+    code: code,
+    message: message
+  }
+}
+
+export const NewHttpError = (resp: HttpResponse<undefined>): HTTPError => {
+  const err = new Error()
+  let appStatusCode
+  switch (resp.status) {
+    case HTTPErrorStatusCode.InvalidRequest:
+      appStatusCode = HTTPErrorStatusCode.InvalidRequest
+      break
+    case HTTPErrorStatusCode.NotConnected:
+      appStatusCode = HTTPErrorStatusCode.NotConnected
+      break
+    case HTTPErrorStatusCode.NotFound:
+      appStatusCode = HTTPErrorStatusCode.NotFound
+      break
+    case HTTPErrorStatusCode.Unauthorized:
+      appStatusCode = HTTPErrorStatusCode.Unauthorized
+      break
+    case HTTPErrorStatusCode.InternalServerErr:
+      appStatusCode = HTTPErrorStatusCode.InternalServerErr
+      break
+  }
+
+  return {
+    ...err,
+    appStatusCode,
+    responseCode: resp.code || '',
+    responseError: resp.error || ''
+  }
+}
