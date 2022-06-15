@@ -1,6 +1,8 @@
 import camelCase from 'lodash.camelcase'
 import { fetchErrorToHttpError, NewHttpError, Auth } from './types'
 
+export * from './types'
+
 export default class KaitakuJSClient {
   // baseApiUrl for calling APIs
   private baseApiUrl: string
