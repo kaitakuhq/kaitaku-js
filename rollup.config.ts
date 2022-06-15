@@ -7,7 +7,7 @@ import json from 'rollup-plugin-json'
 
 const pkg = require('./package.json')
 
-const libraryName = 'kaitaku-js-client'
+const libraryName = 'kaitaku-js'
 
 export default {
   input: `src/${libraryName}.ts`,

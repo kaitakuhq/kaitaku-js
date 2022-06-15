@@ -1,4 +1,4 @@
-import KaitakuJSClient from '../src/kaitaku-js-client'
+import KaitakuJSClient from '../src/kaitaku-js'
 import fetch from 'jest-fetch-mock'
 import { Auth, NewHttpError } from '../src/types'
 
