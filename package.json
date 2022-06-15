@@ -3,6 +3,11 @@
   "version": "0.0.0",
   "description": "",
   "keywords": [],
+  "private": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "main": "dist/kaitaku-js.umd.js",
   "module": "dist/kaitaku-js.es5.js",
   "typings": "dist/types/kaitaku-js.d.ts",
