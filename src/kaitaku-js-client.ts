@@ -1,91 +1,49 @@
-// Import here Polyfills if needed. Recommended core-js (npm i -D core-js)
-// import "core-js/fn/array.find"
-// ...
-import humps from 'humps'
-import { Comment, Project, fetchErrorToHttpError, NewHttpError } from './types'
+import camelCase from 'lodash.camelcase'
+import { fetchErrorToHttpError, NewHttpError, Auth } from './types'
 
 export default class KaitakuJSClient {
+  // baseApiUrl for calling APIs
   private baseApiUrl: string
 
-  constructor(baseApiUrl: string) {
+  // access token to access the API resources
+  private token: string
+
+  constructor(baseApiUrl: string, token: string) {
     if (!baseApiUrl) {
       throw new Error(`Base API URL is required`)
     }
     this.baseApiUrl = baseApiUrl
+    this.token = token
+    return this
   }
 
-  createComment = (
-    projectId: string,
-    categoryId: string,
-    userId: string,
-    comment: string,
-    token: string
-  ): Promise<Comment | null> => {
-    if (!projectId || !categoryId || !token || !userId) {
-      return new Promise(resolve => resolve(null))
+  // signUp is called when user signs up for the first time.
+  public signUp = (email: string, name: string): Promise<Auth> => {
+    const content = {
+      email: email,
+      name: name
     }
-    return this.makeRequest<Comment | null>(
-      `/project/${projectId}/category/${categoryId}/comment?user_id=` + userId,
-      token,
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          comment: comment,
-          user_id: userId
-        })
-      }
-    )
+    return this.makeRequest<Auth>('/signup', {
+      method: 'POST',
+      body: JSON.stringify(content)
+    })
   }
 
-  getProject = (projectId: string, token: string): Promise<Project | null> => {
-    if (!projectId || !token) {
-      return new Promise(resolve => resolve(null))
+  // login is called when user logs in.
+  public login = (email: string): Promise<Auth> => {
+    const content = {
+      email: email
     }
-    return this.makeRequest<Project | null>(`/project/${projectId}`, token)
+    return this.makeRequest<Auth>('/signin', {
+      method: 'POST',
+      body: JSON.stringify(content)
+    })
   }
 
-  listComment = (
-    projectId: string,
-    categoryId: string,
-    userId: string,
-    token: string
-  ): Promise<Comment[]> => {
-    if (!projectId || !categoryId || !token || !userId) {
-      return new Promise(resolve => resolve([]))
-    }
-    return this.makeRequest<Comment[]>(
-      `/project/${projectId}/category/${categoryId}/comment?user_id=` + userId,
-      token
-    )
-  }
-
-  updateComment = (
-    projectId: string,
-    categoryId: string,
-    commentId: string,
-    userId: string,
-    upvoted: boolean,
-    token: string
-  ): Promise<Comment | null> => {
-    if (!projectId || !categoryId || !token || !userId) {
-      return new Promise(resolve => resolve(null))
-    }
-    return this.makeRequest<Comment | null>(
-      `/project/${projectId}/category/${categoryId}/comment/${commentId}`,
-      token,
-      {
-        method: 'PUT',
-        body: JSON.stringify({
-          upvoted: upvoted,
-          user_id: userId
-        })
-      }
-    )
-  }
-
-  private async makeRequest<T>(path: string, token: string, params?: RequestInit): Promise<T> {
+  private async makeRequest<T>(path: string, params?: RequestInit): Promise<T> {
     const url = this.baseApiUrl + path
 
+    const token = this.token
     // append token to header
     if (token) {
       if (!params) {
@@ -98,30 +56,46 @@ export default class KaitakuJSClient {
       if (!(params.headers as Headers).get('Authorization')) {
         ;(params.headers as Headers).append('Authorization', 'Bearer ' + token)
       }
+      if (
+        ((params?.method || '').toLowerCase() === 'post' ||
+          (params?.method || '').toLocaleLowerCase() === 'put') &&
+        !(params.headers as Headers).get('Content-Type')
+      ) {
+        ;(params.headers as Headers).append('Content-Type', 'application/json')
+      }
     }
 
-    return (
-      fetch(url, params)
-        .then(res => res.json())
-        .then(res => {
-          if (res.status !== 'OK') {
-            const err = NewHttpError(res)
-            throw err
-          }
-          return res.data as T
-        })
+    return fetch(url, params)
+      .then(res => res.json())
+      .then(res => {
+        if (res.status !== 'OK') {
+          const err = NewHttpError(res)
+          throw err
+        }
         // @ts-ignore
-        .then(res => this.snakeToCamel(res) as T)
-        .catch(err => {
-          if (err.appStatusCode) {
-            // already converted & thrown in the few lines above
-            throw err
-          }
-          throw fetchErrorToHttpError(err)
-        })
-    )
+        return this.camelizeKeys(res.data) as T
+      })
+      .catch(err => {
+        if (err.appStatusCode) {
+          // already converted & thrown in the few lines above
+          throw err
+        }
+        throw fetchErrorToHttpError(err)
+      })
   }
 
-  // snakeToCamel converts REST API's snake case variables like owner_id to JS standard came case variables like ownerId
-  private snakeToCamel = (obj: object) => humps.camelizeKeys(obj)
+  private camelizeKeys(obj: Record<string, any>): Record<string, any> {
+    if (Array.isArray(obj)) {
+      return obj.map(v => this.camelizeKeys(v))
+    } else if (obj != null && obj.constructor === Object) {
+      return Object.keys(obj).reduce(
+        (result, key) => ({
+          ...result,
+          [camelCase(key)]: this.camelizeKeys(obj[key])
+        }),
+        {}
+      )
+    }
+    return obj
+  }
 }
